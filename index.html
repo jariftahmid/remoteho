@@ -523,15 +523,25 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
     const STORAGE_KEY_URL = "mobile_remote_supabase_url";
     const STORAGE_KEY_KEY = "mobile_remote_supabase_anon_key";
 
-    const DEFAULT_SUPABASE_URL = "https://fdfdckjvxqomrcrqejcr.supabase.co";
-    const DEFAULT_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkZmRja2p2eHFvbXJjcnFlamNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDk4Mjk5MDAsImV4cCI6MjAyNTQwNTkwMH0.g1K2t7YgGjF-example-key";
+    const DEFAULT_SUPABASE_URL = "https://msotutoncecnrjfjiqxj.supabase.co";
+    const DEFAULT_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1zb3R1dG9uY2VjbnJqZmppcXhqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5MzI5MTIsImV4cCI6MjEwODUwODkxMn0.KwmaMQ7WupRpmcLQUoy-VvhVS0AzxBKEPVIIWr888L0";
 
     function getSupabaseUrl() {
-      return localStorage.getItem(STORAGE_KEY_URL) || DEFAULT_SUPABASE_URL;
+      const stored = localStorage.getItem(STORAGE_KEY_URL);
+      if (!stored || stored.includes("fdfdckjvxqomrcrqejcr")) {
+        localStorage.setItem(STORAGE_KEY_URL, DEFAULT_SUPABASE_URL);
+        return DEFAULT_SUPABASE_URL;
+      }
+      return stored;
     }
 
     function getSupabaseAnonKey() {
-      return localStorage.getItem(STORAGE_KEY_KEY) || DEFAULT_SUPABASE_KEY;
+      const stored = localStorage.getItem(STORAGE_KEY_KEY);
+      if (!stored || stored.includes("fdfdckjvxqomrcrqejcr")) {
+        localStorage.setItem(STORAGE_KEY_KEY, DEFAULT_SUPABASE_KEY);
+        return DEFAULT_SUPABASE_KEY;
+      }
+      return stored;
     }
 
     let supabaseClient = null;
@@ -805,9 +815,13 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
       if (screenPollInterval) clearInterval(screenPollInterval);
       if (realtimeChannel && supabaseClient) {
         try { supabaseClient.removeChannel(realtimeChannel); } catch (_) {}
+        realtimeChannel = null;
       }
 
-      // 1. Supabase Realtime Channel
+      // Step 1: If WebRTC P2P is already active, do not subscribe or poll Supabase
+      if (isWebRtcActive) return;
+
+      // 1. Supabase Realtime Channel (standby only before WebRTC connects)
       if (supabaseClient) {
         try {
           realtimeChannel = supabaseClient.channel(`host_${username}`)
@@ -815,27 +829,31 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
               'postgres_changes',
               { event: 'UPDATE', schema: 'public', table: 'hosts', filter: `id=eq.${username}` },
               (payload) => {
-                if (payload && payload.new) {
+                if (payload && payload.new && !isWebRtcActive) {
                   applyHostDataToUI(payload.new);
                 }
               }
             )
             .subscribe();
-        } catch (e) {
-          console.warn("Supabase Realtime subscription notice:", e);
-        }
+        } catch (_) {}
       }
 
-      // 2. High-Speed Frame & Heartbeat Polling (1.0s cadence)
+      // 2. Relaxed fallback polling (only runs before WebRTC P2P is established)
       screenPollInterval = setInterval(async () => {
-        if (!currentUsername) return;
+        if (!currentUsername || isWebRtcActive) {
+          if (isWebRtcActive && screenPollInterval) {
+            clearInterval(screenPollInterval);
+            screenPollInterval = null;
+          }
+          return;
+        }
         try {
           const rows = await supabaseFetch(`hosts?id=eq.${encodeURIComponent(username)}&select=id,status,is_screen_on,battery_pct,is_charging,streaming_mode,last_heartbeat,latest_frame,frame_timestamp`);
-          if (rows && rows.length > 0) {
+          if (rows && rows.length > 0 && !isWebRtcActive) {
             applyHostDataToUI(rows[0]);
           }
         } catch (_) {}
-      }, 1000);
+      }, 2000);
     }
 
     async function refreshScreenNow() {
@@ -1117,6 +1135,50 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
           }
         };
 
+        function handleWebRtcConnected() {
+          if (isWebRtcActive) return;
+          isWebRtcActive = true;
+
+          // Step 1: Unsubscribe/stop Supabase signaling poll, realtime channel & screen polling
+          if (signalingPollInterval) {
+            clearInterval(signalingPollInterval);
+            signalingPollInterval = null;
+          }
+          if (realtimeChannel && supabaseClient) {
+            try { supabaseClient.removeChannel(realtimeChannel); } catch (_) {}
+            realtimeChannel = null;
+          }
+          if (screenPollInterval) {
+            clearInterval(screenPollInterval);
+            screenPollInterval = null;
+          }
+
+          // Step 3: One-time row cleanup in Supabase (delete SDP & ICE candidates to keep DB row minimal)
+          if (currentUsername) {
+            supabaseFetch(`hosts?id=eq.${encodeURIComponent(currentUsername)}`, "PATCH", {
+              webrtc_session: { status: "CONNECTED", connectedAt: Date.now() },
+              webrtc_ice_web: [],
+              webrtc_ice_host: []
+            }).catch(_ => {});
+          }
+
+          const b = document.getElementById("webrtc-badge");
+          if (b) {
+            b.textContent = "⚡ WebRTC P2P (0 Server Requests • Direct)";
+            b.style.background = "rgba(16,185,129,0.25)";
+            b.style.color = "#34d399";
+          }
+        }
+
+        rtcPeerConnection.oniceconnectionstatechange = () => {
+          const s = rtcPeerConnection.iceConnectionState;
+          if (s === "connected" || s === "completed") {
+            handleWebRtcConnected();
+          } else if (s === "disconnected" || s === "failed") {
+            isWebRtcActive = false;
+          }
+        };
+
         rtcPeerConnection.ontrack = (event) => {
           const remoteVideo = document.getElementById("remoteVideo");
           if (remoteVideo && event.streams && event.streams[0]) {
@@ -1127,7 +1189,7 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
         };
 
         rtcDataChannel = rtcPeerConnection.createDataChannel("remoteControl", { ordered: false, maxRetransmits: 0 });
-        setupDataChannelEvents(rtcDataChannel);
+        setupDataChannelEvents(rtcDataChannel, handleWebRtcConnected);
 
         const offer = await rtcPeerConnection.createOffer({
           offerToReceiveVideo: true,
@@ -1148,22 +1210,15 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
 
         startSignalingPoll(username, activeSessionId);
       } catch (e) {
-        console.warn("WebRTC initialization notice:", e);
+        // Silent error handling to avoid log noise
       }
     }
 
-    function setupDataChannelEvents(dc) {
+    function setupDataChannelEvents(dc, onConnectedCallback) {
       dc.binaryType = "arraybuffer";
       dc.onopen = () => {
-        isWebRtcActive = true;
-        const b = document.getElementById("webrtc-badge");
-        if (b) {
-          b.textContent = "⚡ WebRTC P2P (~35ms)";
-          b.style.background = "rgba(16,185,129,0.25)";
-          b.style.color = "#34d399";
-        }
+        if (onConnectedCallback) onConnectedCallback();
         startWebRtcPing();
-        // Send current mode to peer immediately
         if (activeMode) switchLatencyMode(activeMode);
       };
       dc.onclose = () => {
@@ -1196,8 +1251,6 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
               const ping = Date.now() - msg.clientTime;
               const pingEl = document.getElementById("webrtc-ping");
               if (pingEl) pingEl.textContent = ping + " ms";
-            } else if (msg.type === "mode_updated") {
-              console.log("Remote Host Mode Updated:", msg);
             }
           }
         } catch (_) {}
@@ -1212,13 +1265,19 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
             rtcDataChannel.send(JSON.stringify({ type: "ping", time: Date.now() }));
           } catch (_) {}
         }
-      }, 2000);
+      }, 3000);
     }
 
     function startSignalingPoll(username, sessionId) {
       if (signalingPollInterval) clearInterval(signalingPollInterval);
       signalingPollInterval = setInterval(async () => {
-        if (!currentUsername || !rtcPeerConnection) return;
+        if (!currentUsername || !rtcPeerConnection || isWebRtcActive) {
+          if (signalingPollInterval) {
+            clearInterval(signalingPollInterval);
+            signalingPollInterval = null;
+          }
+          return;
+        }
         try {
           const rows = await supabaseFetch(`hosts?id=eq.${encodeURIComponent(username)}&select=webrtc_session,webrtc_ice_host`);
           if (!rows || rows.length === 0) return;
@@ -1250,6 +1309,7 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
     }
 
     async function pushWebIceCandidate(username, sessionId, candidate) {
+      if (isWebRtcActive) return; // Step 1 & 3: Don't push candidate if already connected
       try {
         const rows = await supabaseFetch(`hosts?id=eq.${encodeURIComponent(username)}&select=webrtc_ice_web`);
         let currentList = (rows && rows[0] && Array.isArray(rows[0].webrtc_ice_web)) ? rows[0].webrtc_ice_web : [];
@@ -1304,4 +1364,3 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
   </script>
 </body>
 </html>
-g
