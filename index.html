@@ -396,11 +396,12 @@
               <span id="mode-badge" style="font-size:11px; font-weight:700; color:#34d399; background:rgba(16,185,129,0.15); padding:2px 8px; border-radius:99px;">⚡ Mode 1: Ultra-Fast (60 FPS)</span>
             </h3>
 
-            <!-- 3 Mode Buttons -->
-            <div style="display:flex; gap:6px; margin-bottom:12px;">
-              <button id="btn-mode-fast" class="btn btn-mode active" onclick="switchLatencyMode('ULTRA_FAST')">⚡ Mode 1: Ultra-Fast</button>
-              <button id="btn-mode-balanced" class="btn btn-mode" onclick="switchLatencyMode('BALANCED')">⚖️ Mode 2: Balanced</button>
-              <button id="btn-mode-hd" class="btn btn-mode" onclick="switchLatencyMode('HIGH_QUALITY')">🖼️ Mode 3: High-Quality</button>
+            <!-- Streaming Mode Buttons -->
+            <div style="display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap;">
+              <button id="btn-mode-gaming" class="btn btn-mode" style="border-color:#8b5cf6;" onclick="switchLatencyMode('GAMING_FAST')">🎮 Gaming Fast</button>
+              <button id="btn-mode-fast" class="btn btn-mode active" onclick="switchLatencyMode('ULTRA_FAST')">⚡ Ultra-Fast</button>
+              <button id="btn-mode-balanced" class="btn btn-mode" onclick="switchLatencyMode('BALANCED')">⚖️ Balanced</button>
+              <button id="btn-mode-hd" class="btn btn-mode" onclick="switchLatencyMode('HIGH_QUALITY')">🖼️ High-Quality</button>
             </div>
 
             <!-- Detailed Mode Breakdown Banner -->
@@ -417,6 +418,18 @@
               </div>
               <div id="mode-advantage-text" style="color:#a7f3d0; background:rgba(16,185,129,0.12); padding:6px 8px; border-radius:6px; border-left:3px solid #10b981;">
                 💡 <strong>কী সুবিধা:</strong> ডাটা সাইজ অনেক ছোট হওয়ায় স্লো নেটওয়ার্কেও কোনো ফ্রেম ড্রপ হবে না এবং স্ট্রিমিং হবে সম্পূর্ণ মাখনের মতো স্মুথ।
+              </div>
+            </div>
+
+            <!-- Gaming Fast Direct UDP Card -->
+            <div id="udp-direct-box" style="margin-top:10px; background:#181028; border:1px solid #7c3aed; border-radius:8px; padding:10px; font-size:11px; display:none;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <span style="font-weight:700; color:#c084fc;">🎮 Direct UDP Socket Receiver:</span>
+                <span class="badge" style="background:#7c3aed; color:white; font-size:9px;">PORT 8889</span>
+              </div>
+              <div id="udp-endpoint-text" style="color:#e9d5ff; font-family:monospace; margin-bottom:4px;">udp://--:8889</div>
+              <div style="color:#a855f7; font-size:10px;">
+                MTU-Safe Packets (&lt;1140B) • RGB_565 16-bit • Direct HTML5 Canvas Rendering
               </div>
             </div>
           </div>
@@ -791,6 +804,20 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
       const statusPill = document.getElementById("m-status-pill");
       const screenStateEl = document.getElementById("m-screen-state");
 
+      // Direct IP Handshake & Streaming Mode telemetry
+      if (data.telemetry && data.telemetry.gaming_handshake) {
+        const gh = data.telemetry.gaming_handshake;
+        const udpBox = document.getElementById("udp-direct-box");
+        const udpEp = document.getElementById("udp-endpoint-text");
+        if (udpEp && gh.ip) {
+          udpEp.textContent = `udp://${gh.ip}:${gh.port || 8889}`;
+          if (activeMode === "GAMING_FAST" && udpBox) udpBox.style.display = "block";
+        }
+      }
+      if (data.streaming_mode && data.streaming_mode !== activeMode) {
+        switchLatencyMode(data.streaming_mode);
+      }
+
       if (screenStateEl) {
         screenStateEl.textContent = data.is_screen_on ? "Active (Screen On)" : "Standby (Screen Off)";
         screenStateEl.style.color = data.is_screen_on ? "#34d399" : "#fbbf24";
@@ -921,6 +948,19 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
     window.sendCloudText = sendCloudText;
 
     const MODE_SPECS = {
+      GAMING_FAST: {
+        badge: "🎮 Mode: Gaming Fast (60 FPS UDP)",
+        title: "🎮 Mode: Gaming Fast Mode",
+        subtitle: "(আল্ট্রা-লো ল্যাটেন্সি UDP ও RGB_565)",
+        specs: "240p/360p • 45-60 FPS • 16-bit RGB_565 • Zero MediaCodec CPU • Native UDP Datagrams",
+        desc: "জিরো সিপিইউ এনকোডিং এবং র ডাটোগ্রাম সকেটের মাধ্যমে 360p/240p রেজোলিউশন ও RGB_565 কালারে 60 FPS আল্ট্রা-লো ল্যাটেন্সি স্ট্রিমিং।",
+        advantage: "💡 <strong>কী সুবিধা:</strong> MediaCodec এনকোডার বাইপাস করে সরাসরি র পিক্সেল বাফার ও ছোট UDP প্যাকেট (১১৪০ বাইটের নিচে) পাঠিয়ে গেম খেলার মতো রিয়েলটাইম রেসপন্স পাওয়া যায়।",
+        degradation: "maintain-framerate",
+        bitrate: 600,
+        fps: 60,
+        width: 360,
+        height: 640
+      },
       ULTRA_FAST: {
         badge: "⚡ Mode 1: Ultra-Fast (60 FPS)",
         title: "⚡ Mode 1: Ultra-Fast Mode",
@@ -968,12 +1008,20 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
       document.querySelectorAll(".btn-mode").forEach(b => b.classList.remove("active"));
 
       const spec = MODE_SPECS[mode] || MODE_SPECS.ULTRA_FAST;
-      if (mode === "ULTRA_FAST") {
-        document.getElementById("btn-mode-fast")?.classList.add("active");
-      } else if (mode === "BALANCED") {
-        document.getElementById("btn-mode-balanced")?.classList.add("active");
+      if (mode === "GAMING_FAST") {
+        document.getElementById("btn-mode-gaming")?.classList.add("active");
+        const udpBox = document.getElementById("udp-direct-box");
+        if (udpBox) udpBox.style.display = "block";
       } else {
-        document.getElementById("btn-mode-hd")?.classList.add("active");
+        const udpBox = document.getElementById("udp-direct-box");
+        if (udpBox) udpBox.style.display = "none";
+        if (mode === "ULTRA_FAST") {
+          document.getElementById("btn-mode-fast")?.classList.add("active");
+        } else if (mode === "BALANCED") {
+          document.getElementById("btn-mode-balanced")?.classList.add("active");
+        } else {
+          document.getElementById("btn-mode-hd")?.classList.add("active");
+        }
       }
 
       const badge = document.getElementById("mode-badge");
@@ -1236,13 +1284,32 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
             const bytes = new Uint8Array(event.data);
             if (bytes.length > 1 && bytes[0] === 1) {
               const blob = new Blob([event.data.slice(1)], { type: "image/jpeg" });
-              const url = URL.createObjectURL(blob);
-              const img = document.getElementById("mobile-screen-img");
-              if (img) {
-                const oldUrl = img.src;
-                img.src = url;
-                img.style.display = "block";
-                if (oldUrl && oldUrl.startsWith("blob:")) URL.revokeObjectURL(oldUrl);
+              if (activeMode === "GAMING_FAST") {
+                // Native HTML5 Canvas Rendering (Zero Latency Playback)
+                const canvas = document.getElementById("mobile-screen-canvas");
+                const img = document.getElementById("mobile-screen-img");
+                if (canvas) {
+                  canvas.style.display = "block";
+                  if (img) img.style.display = "none";
+                  createImageBitmap(blob).then(bmp => {
+                    canvas.width = bmp.width;
+                    canvas.height = bmp.height;
+                    const ctx = canvas.getContext("2d", { alpha: false, desynchronized: true });
+                    ctx.drawImage(bmp, 0, 0);
+                    bmp.close();
+                  }).catch(_ => {});
+                }
+              } else {
+                const canvas = document.getElementById("mobile-screen-canvas");
+                if (canvas) canvas.style.display = "none";
+                const url = URL.createObjectURL(blob);
+                const img = document.getElementById("mobile-screen-img");
+                if (img) {
+                  const oldUrl = img.src;
+                  img.src = url;
+                  img.style.display = "block";
+                  if (oldUrl && oldUrl.startsWith("blob:")) URL.revokeObjectURL(oldUrl);
+                }
               }
             }
           } else if (typeof event.data === "string") {
