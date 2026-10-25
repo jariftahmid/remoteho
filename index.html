@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mobile Cloud Remote Controller</title>
+  <title>Mobile Live Screen Remote Controller</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
       background: #090d16;
       color: #e2e8f0;
       min-height: 100vh;
@@ -17,23 +17,58 @@
     header {
       background: #0f172a;
       border-bottom: 1px solid #1e293b;
-      padding: 12px 20px;
+      padding: 12px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-wrap: wrap;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
       gap: 10px;
     }
-    .brand h1 { font-size: 16px; font-weight: 700; color: #10b981; }
-    .brand p { font-size: 12px; color: #94a3b8; }
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      background: #10b981;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: #022c22;
+      font-weight: bold;
+    }
+    .brand h1 { font-size: 17px; font-weight: 700; color: #10b981; }
+    .brand p { font-size: 11px; color: #94a3b8; }
     .badge {
       padding: 4px 10px;
       border-radius: 9999px;
-      font-size: 12px;
-      font-weight: 600;
+      font-size: 11px;
+      font-weight: 700;
       background: rgba(16, 185, 129, 0.15);
       color: #34d399;
       border: 1px solid rgba(16, 185, 129, 0.3);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 10px #10b981; }
+      100% { transform: scale(0.95); opacity: 0.8; }
     }
     .btn {
       padding: 8px 16px;
@@ -43,345 +78,1229 @@
       cursor: pointer;
       border: none;
       transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
     .btn-primary { background: #10b981; color: #022c22; font-weight: 700; }
     .btn-primary:hover { background: #059669; color: white; }
     .btn-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
-    .btn-nav {
-      flex: 1;
-      padding: 12px 8px;
+    .btn-danger:hover { background: #ef4444; color: white; }
+    .btn-action {
       background: #1e293b;
-      color: #cbd5e1;
+      color: #e2e8f0;
       border: 1px solid #334155;
-      font-weight: 700;
+      padding: 8px 14px;
       font-size: 12px;
+      font-weight: 600;
       border-radius: 8px;
       cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
-    .btn-nav:hover { background: #334155; color: white; }
-    main {
+    .btn-action:hover { background: #334155; border-color: #475569; }
+    .btn-mode {
       flex: 1;
-      padding: 20px;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-      gap: 20px;
-      flex-wrap: wrap;
+      padding: 8px 12px;
+      font-size: 12px;
+      background: #1e293b;
+      color: #94a3b8;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .btn-mode.active {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border-color: #10b981;
+      font-weight: 700;
     }
     .card {
       background: #0f172a;
       border: 1px solid #1e293b;
       border-radius: 12px;
-      padding: 24px;
-      max-width: 440px;
-      width: 100%;
+      padding: 16px;
     }
     .input-text {
       width: 100%;
       background: #1e293b;
       border: 1px solid #334155;
-      border-radius: 8px;
-      padding: 10px 14px;
       color: white;
+      padding: 10px 14px;
+      border-radius: 8px;
+      margin-bottom: 12px;
       font-size: 14px;
-      margin-bottom: 14px;
+      outline: none;
+      transition: border 0.2s;
+    }
+    .input-text:focus { border-color: #10b981; }
+    main {
+      flex: 1;
+      padding: 16px 20px;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .screen-layout {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      align-items: flex-start;
+      flex-wrap: wrap;
     }
     .screen-container {
-      width: 340px;
-      background: #000;
-      border-radius: 24px;
-      padding: 10px;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-      border: 3px solid #10b981;
       display: flex;
       flex-direction: column;
       align-items: center;
+      width: 100%;
+      max-width: 440px;
     }
-    .viewport {
-      position: relative;
-      width: 320px;
-      height: 640px;
-      background: #020617;
-      border-radius: 16px;
+    .viewport-box {
+      width: 100%;
+      aspect-ratio: 9 / 18.5;
+      max-height: 78vh;
+      background: #000;
+      border-radius: 20px;
+      border: 3px solid #1e293b;
       overflow: hidden;
+      position: relative;
       cursor: crosshair;
+      user-select: none;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.7);
+      touch-action: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .viewport img {
+    .viewport-box img, .viewport-box video, .viewport-box canvas {
       width: 100%;
       height: 100%;
       object-fit: contain;
       display: block;
-      user-select: none;
-      -webkit-user-drag: none;
     }
     .nav-bar {
       display: flex;
-      gap: 8px;
+      justify-content: space-between;
       width: 100%;
+      background: #0f172a;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid #1e293b;
       margin-top: 10px;
+      gap: 6px;
     }
-    .side-panel {
+    .btn-nav {
       flex: 1;
-      max-width: 420px;
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      padding: 10px 0;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+      text-align: center;
+    }
+    .btn-nav:hover { background: #334155; border-color: #10b981; color: #34d399; }
+    .btn-nav:active { background: #10b981; color: #022c22; }
+    .side-controls {
+      flex: 1;
+      min-width: 320px;
+      max-width: 440px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
     }
     .metric-row {
       display: flex;
       justify-content: space-between;
-      padding: 8px 0;
+      align-items: center;
+      padding: 7px 0;
       border-bottom: 1px solid #1e293b;
       font-size: 13px;
     }
+    .metric-label { color: #94a3b8; }
+    .metric-value { font-weight: 600; color: #e2e8f0; }
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-card {
+      background: #0f172a;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 580px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    pre {
+      background: #020617;
+      padding: 12px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 11px;
+      overflow-x: auto;
+      color: #38bdf8;
+      border: 1px solid #1e293b;
+      margin: 8px 0;
+      user-select: all;
+    }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+
+  <!-- HEADER -->
   <header>
     <div class="brand">
-      <h1>Cloud Mobile Controller (Zero-IP)</h1>
-      <p id="hdr-phone-user">No IP or Router configuration needed</p>
+      <div class="brand-icon">📱</div>
+      <div>
+        <h1>Mobile Live Screen Remote</h1>
+        <p>Direct Screen Streaming & Full Input Control</p>
+      </div>
     </div>
-    <div style="display:flex; gap:10px; align-items:center;">
-      <span id="session-badge" class="badge" style="display:none;">LIVE CLOUD CONNECTED</span>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+      <span id="active-host-badge" class="badge" style="display:none; background:rgba(56,189,248,0.15); color:#38bdf8; border-color:rgba(56,189,248,0.3);">
+        📱 <span id="active-host-id">--</span>
+      </span>
+      <span id="session-badge" class="badge" style="display:none;">
+        <span class="pulse-dot"></span> <span id="session-status-text">LIVE SCREEN ACTIVE</span>
+      </span>
+      <span id="battery-badge" class="badge" style="display:none; background:rgba(251,191,36,0.15); color:#fbbf24; border-color:rgba(251,191,36,0.3);">
+        🔋 <span id="header-battery">--%</span>
+      </span>
+      <button class="btn btn-action" onclick="openSupabaseModal()">⚙️ Supabase Settings</button>
       <button id="logout-btn" class="btn btn-danger" style="display:none;" onclick="logout()">Disconnect</button>
     </div>
   </header>
 
   <main>
-    <!-- LOGIN VIEW (ONLY USERNAME & PASSWORD) -->
-    <div id="login-card" class="card">
-      <h2 style="font-size: 18px; margin-bottom: 8px;">Login to Your Mobile</h2>
-      <p style="font-size: 13px; color: #94a3b8; margin-bottom: 18px;">
-        কোনো আইপি বা পোর্ট ফরোয়ার্ডিং লাগবে না। সরাসরি আপনার মোবাইলের ইউজারনেম ও পাসওয়ার্ড দিন:
+    <!-- LOGIN VIEW -->
+    <div id="login-card" class="card" style="max-width:440px; margin: 40px auto;">
+      <h2 style="font-size: 18px; margin-bottom: 8px; color: #10b981;">Connect to Your Mobile Device</h2>
+      <p style="font-size: 13px; color: #94a3b8; margin-bottom: 18px; line-height: 18px;">
+        কোনো পোর্ট ফরোয়ার্ডিং বা আইপি দরকার নেই। সরাসরি আপনার মোবাইলের ইউজারনেম ও পাসওয়ার্ড দিন:
       </p>
 
-      <label style="font-size: 12px; color: #a7f3d0; font-weight: 600; display:block; margin-bottom:4px;">Mobile Username:</label>
-      <input type="text" id="username-input" class="input-text" value="myphone-62169a" placeholder="e.g. myphone-62169a">
-
-      <label style="font-size: 12px; color: #a7f3d0; font-weight: 600; display:block; margin-bottom:4px;">Password (ডিফল্ট: HostAdmin@2026):</label>
-      <input type="password" id="password-input" class="input-text" value="HostAdmin@2026" placeholder="Enter mobile password">
-
-      <div id="auth-err" style="display:none; color:#f87171; font-size:12px; margin-bottom:12px;"></div>
-
-      <button class="btn btn-primary" style="width:100%; padding:12px;" onclick="connectWithCloud()">Login & Control Mobile</button>
-    </div>
-
-    <!-- ACTIVE CONTROLLER VIEW -->
-    <div id="controller-view" style="display:none; display:flex; gap:20px; flex-wrap:wrap; justify-content:center;">
-      <div class="screen-container">
-        <div class="viewport" id="viewport">
-          <img id="mobile-screen-img" src="" alt="Waiting for mobile screen stream...">
-        </div>
-        <div class="nav-bar">
-          <button class="btn-nav" onclick="sendCloudNav('BACK')">◀ BACK</button>
-          <button class="btn-nav" onclick="sendCloudNav('HOME')">● HOME</button>
-          <button class="btn-nav" onclick="sendCloudNav('RECENTS')">■ RECENTS</button>
-        </div>
+      <!-- Auto-Discovered Online Devices -->
+      <div id="auto-devices-box" style="margin-bottom: 16px; display: none;">
+        <label style="font-size: 12px; color: #34d399; font-weight: 700; display:flex; align-items:center; gap:6px; margin-bottom: 8px;">
+          <span class="pulse-dot"></span> সক্রিয় মোবাইল ডিভাইস (Online Devices Found):
+        </label>
+        <div id="auto-devices-list" style="display:flex; flex-direction:column; gap:8px;"></div>
       </div>
 
-      <div class="side-panel">
-        <div class="card">
-          <h3 style="font-size:15px; margin-bottom:10px; color:#10b981;">Mobile Cloud Status</h3>
-          <div class="metric-row"><span>Device Status:</span><strong id="m-status" style="color:#34d399;">ONLINE</strong></div>
-          <div class="metric-row"><span>Battery:</span><strong id="m-battery">--</strong></div>
-          <div class="metric-row"><span>Last Heartbeat:</span><strong id="m-heartbeat">Just now</strong></div>
-        </div>
+      <label style="font-size: 12px; color: #a7f3d0; font-weight: 600; display:block; margin-bottom:4px;">Mobile User ID (Username):</label>
+      <input type="text" id="username-input" class="input-text" placeholder="e.g. myphone-xxxxxx">
 
-        <div class="card">
-          <h3 style="font-size:15px; margin-bottom:10px;">Remote Keyboard</h3>
-          <div style="display:flex; gap:8px;">
-            <input type="text" id="type-text-input" class="input-text" style="margin-bottom:0;" placeholder="Type text to send to phone...">
-            <button class="btn btn-primary" onclick="sendCloudText()">Send</button>
+      <label style="font-size: 12px; color: #a7f3d0; font-weight: 600; display:block; margin-bottom:4px;">Password (ডিফল্ট: HostAdmin@2026):</label>
+      <input type="password" id="password-input" class="input-text" placeholder="Enter mobile password" value="HostAdmin@2026">
+
+      <div id="auth-err" style="display:none; color:#f87171; font-size:12px; margin-bottom:12px; background: rgba(239,68,68,0.1); padding: 8px; border-radius: 6px;"></div>
+
+      <button class="btn btn-primary" style="width:100%; padding:12px; font-size:14px; justify-content:center;" onclick="connectWithCloud()">
+        Login & View Live Screen
+      </button>
+    </div>
+
+    <!-- MAIN LIVE SCREEN VIEW -->
+    <div id="screen-view" style="display:none;">
+      <div class="screen-layout">
+        
+        <!-- Live Phone Screen Viewport -->
+        <div class="screen-container">
+          <!-- Top Bar on Viewport -->
+          <div style="display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:8px; padding:0 4px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span id="webrtc-badge" class="badge" style="background:rgba(16,185,129,0.2); color:#34d399; font-size:11px; border:1px solid #10b981;">
+                ⚡ WebRTC P2P (~40ms)
+              </span>
+              <span id="webrtc-ping" style="font-size:11px; color:#94a3b8; font-weight:700;">-- ms</span>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="btn-action" style="padding:4px 8px; font-size:11px;" onclick="refreshScreenNow()" title="Force instant screenshot capture">
+                🔄 Refresh Screen
+              </button>
+              <button class="btn-action" style="padding:4px 8px; font-size:11px;" onclick="reconnectWebRtc()" title="Restart WebRTC P2P tunnel">
+                🔄 WebRTC
+              </button>
+              <button class="btn-action" style="padding:4px 8px; font-size:11px;" onclick="toggleFullscreen()" title="Fullscreen">
+                🔲
+              </button>
+            </div>
+          </div>
+
+          <!-- Video / Image Stream Container -->
+          <div class="viewport-box" id="viewport">
+            <video id="remoteVideo" autoplay playsinline muted style="display:none; width:100%; height:100%; object-fit:contain;"></video>
+            <video id="mobile-screen-video" autoplay playsinline muted style="display:none; width:100%; height:100%; object-fit:contain;"></video>
+            <canvas id="mobile-screen-canvas" style="display:none; width:100%; height:100%; object-fit:contain;"></canvas>
+            <img id="mobile-screen-img" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='360' height='720' viewBox='0 0 360 720'><rect width='360' height='720' fill='%230f172a'/><text x='180' y='330' fill='%2310b981' font-size='22' font-family='sans-serif' font-weight='bold' text-anchor='middle'>⚡ Mobile Remote Host</text><text x='180' y='370' fill='%2394a3b8' font-size='14' font-family='sans-serif' text-anchor='middle'>Connecting to live display...</text></svg>" alt="Live mobile screen">
+          </div>
+
+          <!-- Navigation Buttons Bar -->
+          <div class="nav-bar">
+            <button class="btn-nav" onclick="sendCloudNav('BACK')" title="Back">◀ BACK</button>
+            <button class="btn-nav" onclick="sendCloudNav('HOME')" title="Home">● HOME</button>
+            <button class="btn-nav" onclick="sendCloudNav('RECENTS')" title="Recent Apps">■ RECENTS</button>
+            <button class="btn-nav" onclick="sendCloudNav('NOTIFICATIONS')" title="Notifications">🔔 NOTIF</button>
+            <button class="btn-nav" onclick="wakeDeviceScreen()" style="color:#38bdf8; font-weight:bold;" title="Turn screen on remotely">💡 WAKE</button>
+            <button class="btn-nav" onclick="refreshScreenNow()" style="color:#34d399;" title="Fetch latest screen immediately">🔄 SYNC</button>
           </div>
         </div>
 
-        <div class="card">
-          <h3 style="font-size:15px; margin-bottom:8px;">Gesture Control</h3>
-          <p style="font-size:12px; color:#94a3b8; line-height:16px;">
-            মোবাইলের স্ক্রিনে মাউস দিয়ে ক্লিক করলেই সরাসরি ফোনে টাচ (Tap) হবে, আর মাউস চেপে ধরে ড্র্যাগ করলে সোয়াইপ বা স্ক্রল (Swipe) হবে।
-          </p>
+        <!-- Side Remote Controls -->
+        <div class="side-controls">
+          
+          <!-- Live Stream Status Card -->
+          <div class="card">
+            <h3 style="font-size:15px; margin-bottom:10px; color:#10b981; display:flex; justify-content:space-between; align-items:center;">
+              <span>Live Screen Connection</span>
+              <span id="m-status-pill" class="badge">ONLINE</span>
+            </h3>
+            <div class="metric-row">
+              <span class="metric-label">Screen State:</span>
+              <span id="m-screen-state" class="metric-value" style="color:#34d399;">Active (Interactive)</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">Battery Level:</span>
+              <span id="m-battery" class="metric-value">--</span>
+            </div>
+            <div class="metric-row">
+              <span class="metric-label">Last Frame Update:</span>
+              <span id="m-frame-time" class="metric-value" style="color:#38bdf8;">Live</span>
+            </div>
+            <div class="metric-row" style="border-bottom:none;">
+              <span class="metric-label">Last Heartbeat:</span>
+              <span id="m-heartbeat" class="metric-value">Just now</span>
+            </div>
+          </div>
+
+          <!-- Speed & Latency Mode Card -->
+          <div class="card" style="border: 1px solid rgba(16, 185, 129, 0.4);">
+            <h3 style="font-size:14px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+              <span style="color:#10b981;">⚡ Streaming Performance Modes</span>
+              <span id="mode-badge" style="font-size:11px; font-weight:700; color:#34d399; background:rgba(16,185,129,0.15); padding:2px 8px; border-radius:99px;">⚡ Mode 1: Ultra-Fast (60 FPS)</span>
+            </h3>
+
+            <!-- 3 Mode Buttons -->
+            <div style="display:flex; gap:6px; margin-bottom:12px;">
+              <button id="btn-mode-fast" class="btn btn-mode active" onclick="switchLatencyMode('ULTRA_FAST')">⚡ Mode 1: Ultra-Fast</button>
+              <button id="btn-mode-balanced" class="btn btn-mode" onclick="switchLatencyMode('BALANCED')">⚖️ Mode 2: Balanced</button>
+              <button id="btn-mode-hd" class="btn btn-mode" onclick="switchLatencyMode('HIGH_QUALITY')">🖼️ Mode 3: High-Quality</button>
+            </div>
+
+            <!-- Detailed Mode Breakdown Banner -->
+            <div id="mode-detail-box" style="background:#090d16; border:1px solid #1e293b; border-radius:8px; padding:10px; font-size:11px; line-height:16px;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:4px; flex-wrap:wrap; gap:4px;">
+                <span id="mode-title-text" style="font-weight:700; color:#10b981;">⚡ Mode 1: Ultra-Fast Mode</span>
+                <span id="mode-subtitle-text" style="color:#94a3b8;">(সর্বোচ্চ স্পিড ও স্মুথনেস, কোয়ালিটি ছাড়ে)</span>
+              </div>
+              <div id="mode-specs-text" style="color:#38bdf8; font-weight:600; margin-bottom:6px; font-family:monospace;">
+                480x270/360p • 30-60 FPS • 300-600 kbps • MAINTAIN_FRAMERATE • VP8/H.264 Baseline
+              </div>
+              <div id="mode-desc-text" style="color:#cbd5e1; margin-bottom:6px;">
+                এই মোডের প্রধান লক্ষ্যই হলো জিরো ল্যাগ এবং ৬০ FPS স্মুথনেস। কোয়ালিটি খারাপ হলেও চোখের পলকে রেসপন্স করবে।
+              </div>
+              <div id="mode-advantage-text" style="color:#a7f3d0; background:rgba(16,185,129,0.12); padding:6px 8px; border-radius:6px; border-left:3px solid #10b981;">
+                💡 <strong>কী সুবিধা:</strong> ডাটা সাইজ অনেক ছোট হওয়ায় স্লো নেটওয়ার্কেও কোনো ফ্রেম ড্রপ হবে না এবং স্ট্রিমিং হবে সম্পূর্ণ মাখনের মতো স্মুথ।
+              </div>
+            </div>
+          </div>
+
+          <!-- Remote Keyboard Input -->
+          <div class="card">
+            <h3 style="font-size:14px; margin-bottom:10px;">Remote Keyboard</h3>
+            <p style="font-size:11px; color:#94a3b8; margin-bottom:8px;">
+              ফোনের সিলেক্টেড টেক্সট ফিল্ডে সরাসরি টাইপ করে পাঠান:
+            </p>
+            <div style="display:flex; gap:8px;">
+              <input type="text" id="type-text-input" class="input-text" style="margin-bottom:0;" placeholder="Type text here..." onkeydown="if(event.key==='Enter') sendCloudText()">
+              <button class="btn btn-primary" onclick="sendCloudText()">Send</button>
+            </div>
+          </div>
+
+          <!-- Quick Controls -->
+          <div class="card">
+            <h3 style="font-size:14px; margin-bottom:10px;">Quick Actions</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+              <button class="btn-action" onclick="refreshScreenNow()">🔄 Refresh Screen</button>
+              <button class="btn-action" onclick="requestImmediateKeyframe()">⚡ Sync I-Frame</button>
+              <button class="btn-action" onclick="sendCloudCommand({type:'ring_device'})">🔔 Ring Device</button>
+              <button class="btn-action" onclick="wakeDeviceScreen()">💡 Wake Display</button>
+            </div>
+          </div>
+
         </div>
+
       </div>
     </div>
   </main>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { 
-      getFirestore, 
-      doc, 
-      getDoc, 
-      setDoc, 
-      onSnapshot 
-    } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+  <!-- SUPABASE SETTINGS MODAL -->
+  <div id="supabase-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="font-size:17px; color:#10b981; display:flex; align-items:center; gap:8px;">
+          <span>⚙️ Supabase Cloud Configuration</span>
+        </h3>
+        <button class="btn-action" style="padding:4px 8px;" onclick="closeSupabaseModal()">✕</button>
+      </div>
 
-    // Firebase Cloud configuration provisioned for this app
-    const firebaseConfig = {
-      projectId: "gen-lang-client-0052839779",
-      apiKey: "AIzaSyAMRpg5YLfdkmiW3tWq_pS1A_6O6OPoCuE",
-      appId: "1:835001523988:android:dd7f29d948a17b5ec4ac01"
-    };
-    const app = initializeApp(firebaseConfig);
-    // Explicit named Firestore database ID
-    const db = getFirestore(app, "ai-studio-android-remoteho-62368fa1-0461-462b-9312-02bfbe8fae80");
+      <p style="font-size:12px; color:#94a3b8; margin-bottom:14px; line-height:17px;">
+        এই রিমোট কন্ট্রোলারটি <strong>Supabase (PostgREST + Realtime)</strong> ব্যবহার করে স্ক্রিন স্ট্রিম করে।
+      </p>
 
+      <label style="font-size:12px; color:#a7f3d0; font-weight:700; display:block; margin-bottom:4px;">Supabase Project URL:</label>
+      <input type="text" id="modal-supabase-url" class="input-text" placeholder="https://xyz.supabase.co">
+
+      <label style="font-size:12px; color:#a7f3d0; font-weight:700; display:block; margin-bottom:4px;">Supabase Anon Key (Public API Key):</label>
+      <input type="password" id="modal-supabase-key" class="input-text" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+
+      <div id="modal-test-result" style="display:none; font-size:12px; padding:10px; border-radius:8px; margin-bottom:14px;"></div>
+
+      <div style="display:flex; gap:10px; margin-bottom:16px;">
+        <button class="btn btn-action" style="flex:1; justify-content:center;" onclick="testSupabaseConnection()">
+          🔌 Test Connection
+        </button>
+        <button class="btn btn-primary" style="flex:1; justify-content:center;" onclick="saveSupabaseSettings()">
+          💾 Save & Connect
+        </button>
+      </div>
+
+      <div style="border-top:1px solid #1e293b; padding-top:14px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong style="font-size:12px; color:#38bdf8;">Required Supabase SQL Table:</strong>
+          <button class="btn-action" style="padding:4px 8px; font-size:11px;" onclick="copySqlSchema()">📋 Copy SQL</button>
+        </div>
+        <p style="font-size:11px; color:#64748b; margin-top:4px;">
+          Supabase SQL Editor-এ এই কোড রান করুন:
+        </p>
+        <pre id="sql-schema-box">CREATE TABLE IF NOT EXISTS public.hosts (
+    id TEXT PRIMARY KEY,
+    password TEXT NOT NULL DEFAULT 'HostAdmin@2026',
+    status TEXT NOT NULL DEFAULT 'ONLINE',
+    is_screen_on BOOLEAN DEFAULT true,
+    battery_pct INT DEFAULT 100,
+    is_charging BOOLEAN DEFAULT false,
+    streaming_mode TEXT DEFAULT 'LOW_LATENCY',
+    last_heartbeat BIGINT NOT NULL,
+    latest_frame TEXT,
+    frame_timestamp BIGINT,
+    telemetry JSONB DEFAULT '{}'::jsonb,
+    webrtc_session JSONB,
+    webrtc_ice_host JSONB,
+    webrtc_ice_web JSONB,
+    commands JSONB DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()),
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now())
+);
+ALTER TABLE public.hosts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow public anon full access for mobile remote host" ON public.hosts;
+CREATE POLICY "Allow public anon full access for mobile remote host"
+    ON public.hosts FOR ALL
+    TO anon, authenticated
+    USING (true) WITH CHECK (true);</pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- SUPABASE CLIENT & CREDENTIAL PERSISTENCE ---
+    const STORAGE_KEY_URL = "mobile_remote_supabase_url";
+    const STORAGE_KEY_KEY = "mobile_remote_supabase_anon_key";
+
+    const DEFAULT_SUPABASE_URL = "https://fdfdckjvxqomrcrqejcr.supabase.co";
+    const DEFAULT_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZkZmRja2p2eHFvbXJjcnFlamNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MDk4Mjk5MDAsImV4cCI6MjAyNTQwNTkwMH0.g1K2t7YgGjF-example-key";
+
+    function getSupabaseUrl() {
+      return localStorage.getItem(STORAGE_KEY_URL) || DEFAULT_SUPABASE_URL;
+    }
+
+    function getSupabaseAnonKey() {
+      return localStorage.getItem(STORAGE_KEY_KEY) || DEFAULT_SUPABASE_KEY;
+    }
+
+    let supabaseClient = null;
+    let realtimeChannel = null;
+
+    function initSupabase() {
+      const url = getSupabaseUrl();
+      const key = getSupabaseAnonKey();
+      try {
+        if (window.supabase && typeof window.supabase.createClient === "function") {
+          supabaseClient = window.supabase.createClient(url, key, {
+            auth: { persistSession: false, autoRefreshToken: false }
+          });
+        }
+      } catch (e) {
+        console.warn("Supabase init notice:", e);
+      }
+    }
+
+    async function supabaseFetch(endpoint, method = "GET", body = null) {
+      const url = getSupabaseUrl();
+      const key = getSupabaseAnonKey();
+      const headers = {
+        "apikey": key,
+        "Authorization": `Bearer ${key}`,
+        "Content-Type": "application/json"
+      };
+      const options = { method, headers };
+      if (body) {
+        options.body = JSON.stringify(body);
+      }
+      const resp = await fetch(`${url}/rest/v1/${endpoint}`, options);
+      if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error(`HTTP ${resp.status}: ${text}`);
+      }
+      if (method === "GET") {
+        return await resp.json();
+      }
+      return null;
+    }
+
+    // Modal Helpers
+    function openSupabaseModal() {
+      document.getElementById("modal-supabase-url").value = getSupabaseUrl();
+      document.getElementById("modal-supabase-key").value = getSupabaseAnonKey();
+      document.getElementById("modal-test-result").style.display = "none";
+      document.getElementById("supabase-modal").style.display = "flex";
+    }
+    window.openSupabaseModal = openSupabaseModal;
+
+    function closeSupabaseModal() {
+      document.getElementById("supabase-modal").style.display = "none";
+    }
+    window.closeSupabaseModal = closeSupabaseModal;
+
+    async function testSupabaseConnection() {
+      const resultDiv = document.getElementById("modal-test-result");
+      resultDiv.style.display = "block";
+      resultDiv.style.background = "rgba(56,189,248,0.15)";
+      resultDiv.style.color = "#38bdf8";
+      resultDiv.textContent = "Connecting to Supabase...";
+
+      const url = document.getElementById("modal-supabase-url").value.trim();
+      const key = document.getElementById("modal-supabase-key").value.trim();
+
+      try {
+        const resp = await fetch(`${url}/rest/v1/hosts?select=id&limit=1`, {
+          headers: { "apikey": key, "Authorization": `Bearer ${key}` }
+        });
+        if (resp.ok) {
+          resultDiv.style.background = "rgba(16,185,129,0.2)";
+          resultDiv.style.color = "#34d399";
+          resultDiv.textContent = "✅ Successfully connected to Supabase! Table 'hosts' is accessible.";
+        } else {
+          const body = await resp.text();
+          resultDiv.style.background = "rgba(239,68,68,0.2)";
+          resultDiv.style.color = "#f87171";
+          resultDiv.textContent = `❌ HTTP ${resp.status}: ${body}`;
+        }
+      } catch (e) {
+        resultDiv.style.background = "rgba(239,68,68,0.2)";
+        resultDiv.style.color = "#f87171";
+        resultDiv.textContent = `❌ Connection Error: ${e.message}`;
+      }
+    }
+    window.testSupabaseConnection = testSupabaseConnection;
+
+    function saveSupabaseSettings() {
+      const url = document.getElementById("modal-supabase-url").value.trim();
+      const key = document.getElementById("modal-supabase-key").value.trim();
+      if (!url || !key) {
+        alert("Please enter both Supabase Project URL and Anon Key.");
+        return;
+      }
+      localStorage.setItem(STORAGE_KEY_URL, url);
+      localStorage.setItem(STORAGE_KEY_KEY, key);
+      initSupabase();
+      closeSupabaseModal();
+      discoverOnlineDevices();
+      alert("✅ Supabase credentials saved successfully!");
+    }
+    window.saveSupabaseSettings = saveSupabaseSettings;
+
+    function copySqlSchema() {
+      const sql = document.getElementById("sql-schema-box").textContent;
+      navigator.clipboard.writeText(sql).then(() => {
+        alert("✅ SQL Schema copied to clipboard! Paste it into Supabase SQL Editor and run it.");
+      });
+    }
+    window.copySqlSchema = copySqlSchema;
+
+    // --- APPLICATION STATE ---
     let currentUsername = "";
-    let hostDocUnsubscribe = null;
+    let screenPollInterval = null;
+    let signalingPollInterval = null;
+    let webrtcPingInterval = null;
+    let activeMode = "LOW_LATENCY";
+    let lastRenderedFrameTime = 0;
 
+    // WebRTC P2P variables
+    let rtcPeerConnection = null;
+    let rtcDataChannel = null;
+    let activeSessionId = null;
+    let processedHostCandidateSet = new Set();
+    let isWebRtcActive = false;
+
+    // Auto-discover online devices
+    async function discoverOnlineDevices() {
+      const box = document.getElementById("auto-devices-box");
+      const list = document.getElementById("auto-devices-list");
+      try {
+        const rows = await supabaseFetch("hosts?select=id,status,battery_pct,is_charging,last_heartbeat&order=last_heartbeat.desc&limit=5");
+        if (rows && rows.length > 0) {
+          list.innerHTML = "";
+          let onlineFound = false;
+          const now = Date.now();
+          rows.forEach(r => {
+            const diffSec = Math.floor((now - (r.last_heartbeat || 0)) / 1000);
+            if (diffSec <= 180) {
+              onlineFound = true;
+              const btn = document.createElement("button");
+              btn.className = "btn-action";
+              btn.style.width = "100%";
+              btn.style.justifyContent = "space-between";
+              btn.innerHTML = `
+                <span style="font-weight:700; color:#34d399;">📱 ${r.id}</span>
+                <span style="font-size:11px; color:#94a3b8;">${r.battery_pct || 100}% ⚡ • ${diffSec}s ago</span>
+              `;
+              btn.onclick = () => {
+                document.getElementById("username-input").value = r.id;
+                connectWithCloud();
+              };
+              list.appendChild(btn);
+            }
+          });
+          if (onlineFound) {
+            box.style.display = "block";
+          }
+        }
+      } catch (_) {}
+    }
+
+    // --- LOGIN / CONNECT ---
     async function connectWithCloud() {
-      const user = document.getElementById("username-input").value.trim().toLowerCase();
-      const pwd = document.getElementById("password-input").value.trim();
+      const user = document.getElementById("username-input").value.trim();
+      const pass = document.getElementById("password-input").value.trim();
       const errEl = document.getElementById("auth-err");
       errEl.style.display = "none";
 
-      if (!user || !pwd) {
-        errEl.textContent = "Please enter both username and password";
+      if (!user) {
+        errEl.textContent = "Please enter Mobile User ID (Username).";
         errEl.style.display = "block";
         return;
       }
 
       try {
-        const docRef = doc(db, "hosts", user);
-        const docSnap = await getDoc(docRef);
-        if (!docSnap.exists()) {
-          errEl.textContent = "Mobile username '" + user + "' not found yet. Make sure the Remote Host app is open on your mobile.";
+        const rows = await supabaseFetch(`hosts?id=eq.${encodeURIComponent(user)}&select=id,password,status,battery_pct,is_charging,streaming_mode,last_heartbeat,latest_frame,frame_timestamp`);
+        if (!rows || rows.length === 0) {
+          errEl.textContent = `মোবাইল ডিভাইস (${user}) খুঁজে পাওয়া যায়নি। অ্যাপে গিয়ে Cloud Relay চালু আছে কিনা দেখুন।`;
           errEl.style.display = "block";
           return;
         }
 
-        const data = docSnap.data();
-        if (data.password !== pwd) {
-          errEl.textContent = "Incorrect password for this mobile.";
+        const host = rows[0];
+        if (host.password && pass && host.password !== pass) {
+          errEl.textContent = "ভুল পাসওয়ার্ড! আপনার ফোনের Host Password দিন (ডিফল্ট: HostAdmin@2026)।";
           errEl.style.display = "block";
           return;
         }
 
-        // Authenticated! Switch to controller view
         currentUsername = user;
         document.getElementById("login-card").style.display = "none";
-        document.getElementById("controller-view").style.display = "flex";
+        document.getElementById("screen-view").style.display = "block";
         document.getElementById("session-badge").style.display = "inline-flex";
+        document.getElementById("active-host-badge").style.display = "inline-flex";
+        document.getElementById("active-host-id").textContent = user;
+        document.getElementById("battery-badge").style.display = "inline-flex";
         document.getElementById("logout-btn").style.display = "inline-flex";
-        document.getElementById("hdr-phone-user").textContent = "Connected to: " + user;
 
+        applyHostDataToUI(host);
         listenToMobileScreen(user);
-        initCloudTouches();
+        startWebRtcConnection(user);
       } catch (e) {
-        errEl.textContent = "Cloud connection error: " + e.message;
+        errEl.textContent = `কানেকশন এরর: ${e.message}`;
         errEl.style.display = "block";
+      }
+    }
+    window.connectWithCloud = connectWithCloud;
+
+    // --- LIVE SCREEN STREAMING & POLLING ---
+    function applyHostDataToUI(data) {
+      if (!data) return;
+
+      // Frame rendering
+      const frame = data.latest_frame || data.latestFrame;
+      const fTimestamp = data.frame_timestamp || data.frameTimestamp || 0;
+      if (frame && (fTimestamp > lastRenderedFrameTime || !lastRenderedFrameTime)) {
+        lastRenderedFrameTime = fTimestamp;
+        const img = document.getElementById("mobile-screen-img");
+        if (img) {
+          img.src = frame.startsWith("data:") ? frame : ("data:image/jpeg;base64," + frame);
+          img.style.display = "block";
+          const vid = document.getElementById("mobile-screen-video");
+          const rVid = document.getElementById("remoteVideo");
+          if (vid) vid.style.display = "none";
+          if (rVid) rVid.style.display = "none";
+        }
+        const frameTimeEl = document.getElementById("m-frame-time");
+        if (frameTimeEl) {
+          frameTimeEl.textContent = "Live (" + new Date(fTimestamp).toLocaleTimeString() + ")";
+        }
+      }
+
+      // Battery & Charging
+      const battVal = data.battery_pct !== undefined ? data.battery_pct : "--";
+      const isCharging = !!data.is_charging;
+      const battText = battVal + "%" + (isCharging ? " ⚡" : "");
+      const battEl = document.getElementById("m-battery");
+      if (battEl) battEl.textContent = battText;
+      const hBattEl = document.getElementById("header-battery");
+      if (hBattEl) hBattEl.textContent = battText;
+
+      // Heartbeat & Status
+      const hbTime = data.last_heartbeat || 0;
+      const hbEl = document.getElementById("m-heartbeat");
+      const statusPill = document.getElementById("m-status-pill");
+      const screenStateEl = document.getElementById("m-screen-state");
+
+      if (screenStateEl) {
+        screenStateEl.textContent = data.is_screen_on ? "Active (Screen On)" : "Standby (Screen Off)";
+        screenStateEl.style.color = data.is_screen_on ? "#34d399" : "#fbbf24";
+      }
+
+      if (hbTime) {
+        const diff = Math.max(0, Math.floor((Date.now() - hbTime) / 1000));
+        if (diff <= 15) {
+          if (hbEl) { hbEl.textContent = "Just now (" + diff + "s ago)"; hbEl.style.color = "#34d399"; }
+          if (statusPill) { statusPill.textContent = "ONLINE"; statusPill.style.color = "#34d399"; }
+        } else if (diff <= 45) {
+          if (hbEl) { hbEl.textContent = diff + "s ago"; hbEl.style.color = "#fbbf24"; }
+          if (statusPill) { statusPill.textContent = "IDLE"; statusPill.style.color = "#fbbf24"; }
+        } else {
+          if (hbEl) { hbEl.textContent = diff + "s ago"; hbEl.style.color = "#f87171"; }
+          if (statusPill) { statusPill.textContent = "OFFLINE"; statusPill.style.color = "#f87171"; }
+        }
       }
     }
 
     function listenToMobileScreen(username) {
-      if (hostDocUnsubscribe) hostDocUnsubscribe();
+      if (screenPollInterval) clearInterval(screenPollInterval);
+      if (realtimeChannel && supabaseClient) {
+        try { supabaseClient.removeChannel(realtimeChannel); } catch (_) {}
+      }
 
-      hostDocUnsubscribe = onSnapshot(doc(db, "hosts", username), (docSnap) => {
-        if (!docSnap.exists()) return;
-        const data = docSnap.data();
-        if (data.latestFrame) {
-          document.getElementById("mobile-screen-img").src = data.latestFrame;
+      // 1. Supabase Realtime Channel
+      if (supabaseClient) {
+        try {
+          realtimeChannel = supabaseClient.channel(`host_${username}`)
+            .on(
+              'postgres_changes',
+              { event: 'UPDATE', schema: 'public', table: 'hosts', filter: `id=eq.${username}` },
+              (payload) => {
+                if (payload && payload.new) {
+                  applyHostDataToUI(payload.new);
+                }
+              }
+            )
+            .subscribe();
+        } catch (e) {
+          console.warn("Supabase Realtime subscription notice:", e);
         }
-        document.getElementById("m-status").textContent = data.status || "ONLINE";
-        document.getElementById("m-battery").textContent = (data.batteryPct || "--") + "%" + (data.isCharging ? " ⚡" : "");
-        if (data.lastHeartbeat) {
-          const secAgo = Math.round((Date.now() - data.lastHeartbeat) / 1000);
-          document.getElementById("m-heartbeat").textContent = secAgo + "s ago";
-        }
-      }, (err) => {
-        console.error("Snapshot error:", err);
-      });
+      }
+
+      // 2. High-Speed Frame & Heartbeat Polling (1.0s cadence)
+      screenPollInterval = setInterval(async () => {
+        if (!currentUsername) return;
+        try {
+          const rows = await supabaseFetch(`hosts?id=eq.${encodeURIComponent(username)}&select=id,status,is_screen_on,battery_pct,is_charging,streaming_mode,last_heartbeat,latest_frame,frame_timestamp`);
+          if (rows && rows.length > 0) {
+            applyHostDataToUI(rows[0]);
+          }
+        } catch (_) {}
+      }, 1000);
     }
 
-    async function sendCloudCommand(cmd) {
+    async function refreshScreenNow() {
       if (!currentUsername) return;
       try {
-        const cmdId = "CMD-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
-        await setDoc(doc(db, "hosts", currentUsername, "commands", cmdId), {
-          commandId: cmdId,
-          ...cmd,
-          timestamp: Date.now(),
-          executed: false
+        await sendCloudCommand({ type: "take_screenshot" });
+        setTimeout(async () => {
+          const rows = await supabaseFetch(`hosts?id=eq.${encodeURIComponent(currentUsername)}&select=id,status,is_screen_on,battery_pct,is_charging,streaming_mode,last_heartbeat,latest_frame,frame_timestamp`);
+          if (rows && rows.length > 0) {
+            applyHostDataToUI(rows[0]);
+          }
+        }, 180);
+      } catch (_) {}
+    }
+    window.refreshScreenNow = refreshScreenNow;
+
+    // --- COMMAND DISPATCHING & INPUT CONTROL ---
+    async function sendCloudCommand(payload) {
+      if (!currentUsername) return;
+
+      // 1. Instant 0ms execution via WebRTC DataChannel
+      if (rtcDataChannel && rtcDataChannel.readyState === "open") {
+        try {
+          rtcDataChannel.send(JSON.stringify(payload));
+          return;
+        } catch (err) {
+          console.warn("WebRTC DataChannel send failed, falling back to Supabase:", err);
+        }
+      }
+
+      // 2. Supabase Command Queue fallback
+      try {
+        await supabaseFetch(`hosts?id=eq.${encodeURIComponent(currentUsername)}`, "PATCH", {
+          commands: [{
+            ...payload,
+            timestamp: Date.now()
+          }]
         });
       } catch (e) {
-        console.error("Failed to send command to mobile:", e);
+        console.error("Failed to send command to Supabase:", e);
       }
     }
+    window.sendCloudCommand = sendCloudCommand;
 
-    window.connectWithCloud = connectWithCloud;
-    window.sendCloudNav = function(action) {
+    function sendCloudNav(action) {
       sendCloudCommand({ type: "nav", action: action });
-    };
-    window.sendCloudText = function() {
-      const el = document.getElementById("type-text-input");
-      if (!el.value) return;
-      sendCloudCommand({ type: "text", text: el.value });
-      el.value = "";
-    };
-    window.logout = function() {
-      if (hostDocUnsubscribe) hostDocUnsubscribe();
-      location.reload();
+      setTimeout(refreshScreenNow, 200);
+    }
+    window.sendCloudNav = sendCloudNav;
+
+    function wakeDeviceScreen() {
+      sendCloudCommand({ type: "wake" });
+      setTimeout(refreshScreenNow, 300);
+    }
+    window.wakeDeviceScreen = wakeDeviceScreen;
+
+    function sendCloudText() {
+      const input = document.getElementById("type-text-input");
+      const text = input.value;
+      if (!text) return;
+      sendCloudCommand({ type: "text", text: text });
+      input.value = "";
+      setTimeout(refreshScreenNow, 250);
+    }
+    window.sendCloudText = sendCloudText;
+
+    const MODE_SPECS = {
+      ULTRA_FAST: {
+        badge: "⚡ Mode 1: Ultra-Fast (60 FPS)",
+        title: "⚡ Mode 1: Ultra-Fast Mode",
+        subtitle: "(সর্বোচ্চ স্পিড ও স্মুথনেস, কোয়ালিটি ছাড়ে)",
+        specs: "480x270/360p • 30-60 FPS • 300-600 kbps • MAINTAIN_FRAMERATE • VP8/H.264 Baseline",
+        desc: "এই মোডের প্রধান লক্ষ্যই হলো জিরো ল্যাগ এবং ৬০ FPS স্মুথনেস। কোয়ালিটি খারাপ হলেও চোখের পলকে রেসপন্স করবে।",
+        advantage: "💡 <strong>কী সুবিধা:</strong> ডাটা সাইজ অনেক ছোট হওয়ায় স্লো নেটওয়ার্কেও কোনো ফ্রেম ড্রপ হবে না এবং স্ট্রিমিং হবে সম্পূর্ণ মাখনের মতো স্মুথ।",
+        degradation: "maintain-framerate",
+        bitrate: 450,
+        fps: 60,
+        width: 360,
+        height: 640
+      },
+      BALANCED: {
+        badge: "⚖️ Mode 2: Balanced (720p)",
+        title: "⚖️ Mode 2: Balanced Mode",
+        subtitle: "(স্পিড ও কোয়ালিটির মাঝামাঝি)",
+        specs: "1280x720 (720p HD) • 24-30 FPS • 1200-1800 kbps • BALANCED • H.264/VP8",
+        desc: "সাধারণ দৈনন্দিন ব্যবহারের জন্য এটি সেরা মোড।",
+        advantage: "💡 <strong>কী সুবিধা:</strong> টেক্সট ও স্ক্রিন স্পষ্ট দেখা যাবে এবং ল্যাটেন্সিও নিয়ন্ত্রণে থাকবে।",
+        degradation: "balanced",
+        bitrate: 1500,
+        fps: 30,
+        width: 720,
+        height: 1280
+      },
+      HIGH_QUALITY: {
+        badge: "🖼️ Mode 3: High-Quality (1080p)",
+        title: "🖼️ Mode 3: High-Quality Mode",
+        subtitle: "(ক্রিস্টাল ক্লিয়ার কোয়ালিটি)",
+        specs: "1920x1080 (1080p Full HD) • 20-24 FPS • 3000-4500 kbps • MAINTAIN_RESOLUTION • H.264",
+        desc: "ভিডিও, ছবি বা সূক্ষ্ম লেখা দেখার জন্য, যেখানে ল্যাটেন্সি সামান্য বাড়লেও সমস্যা নেই কিন্তু ডিটেইলিং দরকার।",
+        advantage: "💡 <strong>কী সুবিধা:</strong> পিকচার কোয়ালিটি একদম ফোনের অরিজিনাল স্ক্রিনের মতো নিখুঁত দেখাবে।",
+        degradation: "maintain-resolution",
+        bitrate: 3800,
+        fps: 24,
+        width: 1080,
+        height: 1920
+      }
     };
 
-    function initCloudTouches() {
-      const vp = document.getElementById("viewport");
-      let isDown = false;
-      let startX = 0, startY = 0, startTime = 0;
+    function switchLatencyMode(mode) {
+      if (mode === "LOW_LATENCY") mode = "ULTRA_FAST";
+      activeMode = mode;
+      document.querySelectorAll(".btn-mode").forEach(b => b.classList.remove("active"));
 
-      function getNorm(clientX, clientY) {
-        const r = vp.getBoundingClientRect();
-        return {
-          x: Math.max(0.01, Math.min(0.99, (clientX - r.left) / r.width)),
-          y: Math.max(0.01, Math.min(0.99, (clientY - r.top) / r.height))
-        };
+      const spec = MODE_SPECS[mode] || MODE_SPECS.ULTRA_FAST;
+      if (mode === "ULTRA_FAST") {
+        document.getElementById("btn-mode-fast")?.classList.add("active");
+      } else if (mode === "BALANCED") {
+        document.getElementById("btn-mode-balanced")?.classList.add("active");
+      } else {
+        document.getElementById("btn-mode-hd")?.classList.add("active");
       }
 
-      vp.addEventListener("mousedown", (e) => {
-        isDown = true;
-        startTime = Date.now();
-        const p = getNorm(e.clientX, e.clientY);
-        startX = p.x;
-        startY = p.y;
-      });
+      const badge = document.getElementById("mode-badge");
+      if (badge) badge.textContent = spec.badge;
+      const tText = document.getElementById("mode-title-text");
+      if (tText) tText.textContent = spec.title;
+      const subText = document.getElementById("mode-subtitle-text");
+      if (subText) subText.textContent = spec.subtitle;
+      const specsText = document.getElementById("mode-specs-text");
+      if (specsText) specsText.textContent = spec.specs;
+      const descText = document.getElementById("mode-desc-text");
+      if (descText) descText.textContent = spec.desc;
+      const advText = document.getElementById("mode-advantage-text");
+      if (advText) advText.innerHTML = spec.advantage;
 
-      window.addEventListener("mouseup", (e) => {
-        if (!isDown) return;
-        isDown = false;
-        const p = getNorm(e.clientX, e.clientY);
-        const dist = Math.hypot(p.x - startX, p.y - startY);
-        const elapsed = Date.now() - startTime;
-        if (dist < 0.03) {
-          sendCloudCommand({ type: "tap", x: startX, y: startY });
-        } else {
-          sendCloudCommand({ type: "swipe", startX: startX, startY: startY, endX: p.x, endY: p.y, durationMs: Math.min(600, elapsed) });
-        }
-      });
+      // 1. Direct WebRTC P2P DataChannel command if open
+      if (rtcDataChannel && rtcDataChannel.readyState === "open") {
+        try {
+          rtcDataChannel.send(JSON.stringify({
+            type: "set_mode",
+            mode: mode,
+            width: spec.width,
+            height: spec.height,
+            bitrate: spec.bitrate,
+            fps: spec.fps,
+            degradation: spec.degradation
+          }));
+        } catch (_) {}
+      }
 
-      vp.addEventListener("touchstart", (e) => {
-        if (!e.touches.length) return;
-        isDown = true;
-        startTime = Date.now();
-        const t = e.touches[0];
-        const p = getNorm(t.clientX, t.clientY);
-        startX = p.x;
-        startY = p.y;
-      }, { passive: true });
+      // 2. Adjust WebRTC video track parameters if RTCRtpSender exists
+      if (rtcPeerConnection) {
+        rtcPeerConnection.getSenders().forEach(sender => {
+          if (sender.track && sender.track.kind === "video") {
+            try {
+              const params = sender.getParameters();
+              if (!params.encodings) params.encodings = [{}];
+              params.degradationPreference = spec.degradation;
+              params.encodings[0].maxBitrate = spec.bitrate * 1000;
+              params.encodings[0].maxFramerate = spec.fps;
+              sender.setParameters(params).catch(_ => {});
+            } catch (_) {}
+          }
+        });
+      }
 
-      window.addEventListener("touchend", (e) => {
-        if (!isDown) return;
-        isDown = false;
-        const t = e.changedTouches ? e.changedTouches[0] : null;
-        if (!t) return;
-        const p = getNorm(t.clientX, t.clientY);
-        const dist = Math.hypot(p.x - startX, p.y - startY);
-        const elapsed = Date.now() - startTime;
-        if (dist < 0.03) {
-          sendCloudCommand({ type: "tap", x: startX, y: startY });
-        } else {
-          sendCloudCommand({ type: "swipe", startX: startX, startY: startY, endX: p.x, endY: p.y, durationMs: Math.min(600, elapsed) });
-        }
+      // 3. Cloud Relay PostgREST synchronization
+      sendCloudCommand({
+        type: "set_mode",
+        mode: mode,
+        width: spec.width,
+        height: spec.height,
+        bitrate: spec.bitrate,
+        fps: spec.fps
       });
     }
+    window.switchLatencyMode = switchLatencyMode;
+
+    function requestImmediateKeyframe() {
+      sendCloudCommand({ type: "request_keyframe" });
+      refreshScreenNow();
+    }
+    window.requestImmediateKeyframe = requestImmediateKeyframe;
+
+    function toggleFullscreen() {
+      const vp = document.getElementById("viewport");
+      if (!document.fullscreenElement) {
+        vp.requestFullscreen?.().catch(_ => {});
+      } else {
+        document.exitFullscreen?.().catch(_ => {});
+      }
+    }
+    window.toggleFullscreen = toggleFullscreen;
+
+    // --- INTERACTIVE SCREEN TOUCH & GESTURES ---
+    const viewport = document.getElementById("viewport");
+    let pointerStartX = 0;
+    let pointerStartY = 0;
+    let pointerStartTime = 0;
+    let isPointerDown = false;
+
+    viewport.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      sendCloudNav("BACK");
+    });
+
+    viewport.addEventListener("pointerdown", (e) => {
+      isPointerDown = true;
+      const rect = viewport.getBoundingClientRect();
+      pointerStartX = (e.clientX - rect.left) / rect.width;
+      pointerStartY = (e.clientY - rect.top) / rect.height;
+      pointerStartTime = Date.now();
+    });
+
+    viewport.addEventListener("pointerup", (e) => {
+      if (!isPointerDown) return;
+      isPointerDown = false;
+      const rect = viewport.getBoundingClientRect();
+      const endX = (e.clientX - rect.left) / rect.width;
+      const endY = (e.clientY - rect.top) / rect.height;
+      const duration = Date.now() - pointerStartTime;
+      const dist = Math.hypot(endX - pointerStartX, endY - pointerStartY);
+
+      if (dist < 0.035) {
+        sendCloudCommand({ type: "tap", x: pointerStartX, y: pointerStartY });
+      } else {
+        sendCloudCommand({
+          type: "swipe",
+          startX: pointerStartX,
+          startY: pointerStartY,
+          endX: endX,
+          endY: endY,
+          durationMs: Math.min(600, Math.max(150, duration))
+        });
+      }
+      setTimeout(refreshScreenNow, 200);
+    });
+
+    viewport.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const rect = viewport.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
+      const deltaY = e.deltaY > 0 ? 0.22 : -0.22;
+      sendCloudCommand({
+        type: "swipe",
+        startX: x,
+        startY: y,
+        endX: x,
+        endY: Math.max(0.05, Math.min(0.95, y - deltaY)),
+        durationMs: 200
+      });
+      setTimeout(refreshScreenNow, 200);
+    }, { passive: false });
+
+    // --- WEBRTC PEER-TO-PEER SETUP ---
+    async function startWebRtcConnection(username) {
+      if (rtcPeerConnection) {
+        try { rtcPeerConnection.close(); } catch (_) {}
+      }
+      processedHostCandidateSet.clear();
+      activeSessionId = "SES-" + Math.floor(1000 + Math.random() * 9000);
+
+      const rtcConfig = {
+        iceServers: [
+          { urls: "stun:stun.l.google.com:19302" },
+          { urls: "stun:stun1.l.google.com:19302" },
+          { urls: "stun:stun2.l.google.com:19302" }
+        ],
+        sdpSemantics: "unified-plan"
+      };
+
+      try {
+        rtcPeerConnection = new RTCPeerConnection(rtcConfig);
+
+        rtcPeerConnection.onicecandidate = (event) => {
+          if (event.candidate && currentUsername) {
+            pushWebIceCandidate(currentUsername, activeSessionId, event.candidate);
+          }
+        };
+
+        rtcPeerConnection.ontrack = (event) => {
+          const remoteVideo = document.getElementById("remoteVideo");
+          if (remoteVideo && event.streams && event.streams[0]) {
+            remoteVideo.srcObject = event.streams[0];
+            remoteVideo.style.display = "block";
+            document.getElementById("mobile-screen-img").style.display = "none";
+          }
+        };
+
+        rtcDataChannel = rtcPeerConnection.createDataChannel("remoteControl", { ordered: false, maxRetransmits: 0 });
+        setupDataChannelEvents(rtcDataChannel);
+
+        const offer = await rtcPeerConnection.createOffer({
+          offerToReceiveVideo: true,
+          offerToReceiveAudio: false
+        });
+        await rtcPeerConnection.setLocalDescription(offer);
+
+        await supabaseFetch(`hosts?id=eq.${encodeURIComponent(username)}`, "PATCH", {
+          webrtc_session: {
+            sessionId: activeSessionId,
+            offer: { type: "offer", sdp: offer.sdp },
+            status: "OFFERED",
+            offerTime: Date.now()
+          },
+          webrtc_ice_web: [],
+          webrtc_ice_host: []
+        });
+
+        startSignalingPoll(username, activeSessionId);
+      } catch (e) {
+        console.warn("WebRTC initialization notice:", e);
+      }
+    }
+
+    function setupDataChannelEvents(dc) {
+      dc.binaryType = "arraybuffer";
+      dc.onopen = () => {
+        isWebRtcActive = true;
+        const b = document.getElementById("webrtc-badge");
+        if (b) {
+          b.textContent = "⚡ WebRTC P2P (~35ms)";
+          b.style.background = "rgba(16,185,129,0.25)";
+          b.style.color = "#34d399";
+        }
+        startWebRtcPing();
+        // Send current mode to peer immediately
+        if (activeMode) switchLatencyMode(activeMode);
+      };
+      dc.onclose = () => {
+        isWebRtcActive = false;
+        const b = document.getElementById("webrtc-badge");
+        if (b) {
+          b.textContent = "Cloud Relay (PostgREST)";
+          b.style.background = "rgba(56,189,248,0.15)";
+          b.style.color = "#38bdf8";
+        }
+      };
+      dc.onmessage = (event) => {
+        try {
+          if (event.data instanceof ArrayBuffer) {
+            const bytes = new Uint8Array(event.data);
+            if (bytes.length > 1 && bytes[0] === 1) {
+              const blob = new Blob([event.data.slice(1)], { type: "image/jpeg" });
+              const url = URL.createObjectURL(blob);
+              const img = document.getElementById("mobile-screen-img");
+              if (img) {
+                const oldUrl = img.src;
+                img.src = url;
+                img.style.display = "block";
+                if (oldUrl && oldUrl.startsWith("blob:")) URL.revokeObjectURL(oldUrl);
+              }
+            }
+          } else if (typeof event.data === "string") {
+            const msg = JSON.parse(event.data);
+            if (msg.type === "pong" && msg.clientTime) {
+              const ping = Date.now() - msg.clientTime;
+              const pingEl = document.getElementById("webrtc-ping");
+              if (pingEl) pingEl.textContent = ping + " ms";
+            } else if (msg.type === "mode_updated") {
+              console.log("Remote Host Mode Updated:", msg);
+            }
+          }
+        } catch (_) {}
+      };
+    }
+
+    function startWebRtcPing() {
+      if (webrtcPingInterval) clearInterval(webrtcPingInterval);
+      webrtcPingInterval = setInterval(() => {
+        if (rtcDataChannel && rtcDataChannel.readyState === "open") {
+          try {
+            rtcDataChannel.send(JSON.stringify({ type: "ping", time: Date.now() }));
+          } catch (_) {}
+        }
+      }, 2000);
+    }
+
+    function startSignalingPoll(username, sessionId) {
+      if (signalingPollInterval) clearInterval(signalingPollInterval);
+      signalingPollInterval = setInterval(async () => {
+        if (!currentUsername || !rtcPeerConnection) return;
+        try {
+          const rows = await supabaseFetch(`hosts?id=eq.${encodeURIComponent(username)}&select=webrtc_session,webrtc_ice_host`);
+          if (!rows || rows.length === 0) return;
+          const host = rows[0];
+
+          if (host.webrtc_session && host.webrtc_session.sessionId === sessionId && host.webrtc_session.answer) {
+            if (rtcPeerConnection.signalingState === "have-local-offer") {
+              const answerDesc = new RTCSessionDescription(host.webrtc_session.answer);
+              await rtcPeerConnection.setRemoteDescription(answerDesc);
+            }
+          }
+
+          if (host.webrtc_ice_host && Array.isArray(host.webrtc_ice_host)) {
+            for (const c of host.webrtc_ice_host) {
+              if (c.sdp && !processedHostCandidateSet.has(c.sdp)) {
+                processedHostCandidateSet.add(c.sdp);
+                try {
+                  await rtcPeerConnection.addIceCandidate(new RTCIceCandidate({
+                    candidate: c.sdp,
+                    sdpMid: c.sdpMid || "0",
+                    sdpMLineIndex: c.sdpMLineIndex !== undefined ? c.sdpMLineIndex : 0
+                  }));
+                } catch (_) {}
+              }
+            }
+          }
+        } catch (_) {}
+      }, 1200);
+    }
+
+    async function pushWebIceCandidate(username, sessionId, candidate) {
+      try {
+        const rows = await supabaseFetch(`hosts?id=eq.${encodeURIComponent(username)}&select=webrtc_ice_web`);
+        let currentList = (rows && rows[0] && Array.isArray(rows[0].webrtc_ice_web)) ? rows[0].webrtc_ice_web : [];
+        currentList.push({
+          sessionId: sessionId,
+          sdp: candidate.candidate,
+          sdpMid: candidate.sdpMid,
+          sdpMLineIndex: candidate.sdpMLineIndex,
+          timestamp: Date.now()
+        });
+        await supabaseFetch(`hosts?id=eq.${encodeURIComponent(username)}`, "PATCH", {
+          webrtc_ice_web: currentList
+        });
+      } catch (_) {}
+    }
+
+    window.reconnectWebRtc = function() {
+      if (currentUsername) {
+        startWebRtcConnection(currentUsername);
+      }
+    };
+
+    function logout() {
+      if (screenPollInterval) clearInterval(screenPollInterval);
+      if (signalingPollInterval) clearInterval(signalingPollInterval);
+      if (webrtcPingInterval) clearInterval(webrtcPingInterval);
+      if (realtimeChannel && supabaseClient) {
+        try { supabaseClient.removeChannel(realtimeChannel); } catch (_) {}
+      }
+      if (rtcPeerConnection) {
+        try { rtcPeerConnection.close(); } catch (_) {}
+        rtcPeerConnection = null;
+      }
+      rtcDataChannel = null;
+      isWebRtcActive = false;
+      currentUsername = "";
+      document.getElementById("login-card").style.display = "block";
+      document.getElementById("screen-view").style.display = "none";
+      document.getElementById("session-badge").style.display = "none";
+      document.getElementById("active-host-badge").style.display = "none";
+      document.getElementById("battery-badge").style.display = "none";
+      document.getElementById("logout-btn").style.display = "none";
+    }
+    window.logout = logout;
+
+    // Initialization on load
+    window.addEventListener("DOMContentLoaded", () => {
+      initSupabase();
+      discoverOnlineDevices();
+      setInterval(discoverOnlineDevices, 10000);
+    });
   </script>
 </body>
 </html>
