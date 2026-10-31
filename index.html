@@ -297,9 +297,12 @@
 
       <!-- Auto-Discovered Online Devices -->
       <div id="auto-devices-box" style="margin-bottom: 16px; display: none;">
-        <label style="font-size: 12px; color: #34d399; font-weight: 700; display:flex; align-items:center; gap:6px; margin-bottom: 8px;">
-          <span class="pulse-dot"></span> সক্রিয় মোবাইল ডিভাইস (Online Devices Found):
-        </label>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <label style="font-size: 12px; color: #34d399; font-weight: 700; display:flex; align-items:center; gap:6px;">
+            <span class="pulse-dot"></span> সক্রিয় মোবাইল ডিভাইস (Online Devices):
+          </label>
+          <button class="btn-action" style="padding:2px 8px; font-size:11px;" onclick="discoverOnlineDevices()">🔄 Refresh</button>
+        </div>
         <div id="auto-devices-list" style="display:flex; flex-direction:column; gap:8px;"></div>
       </div>
 
@@ -856,7 +859,7 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
         } catch (_) {}
       }
 
-      // 2. Relaxed fallback polling (only runs before WebRTC P2P is established)
+      // 2. Relaxed fallback polling (only runs on standby before WebRTC P2P is established)
       screenPollInterval = setInterval(async () => {
         if (!currentUsername || isWebRtcActive) {
           if (isWebRtcActive && screenPollInterval) {
@@ -871,7 +874,7 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
             applyHostDataToUI(rows[0]);
           }
         } catch (_) {}
-      }, 2000);
+      }, 7000);
     }
 
     async function refreshScreenNow() {
@@ -1343,7 +1346,7 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
             }
           }
         } catch (_) {}
-      }, 1200);
+      }, 2500);
     }
 
     async function pushWebIceCandidate(username, sessionId, candidate) {
@@ -1393,11 +1396,11 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
     }
     window.logout = logout;
 
-    // Initialization on load
+    // Initialization on load - Quota Saver Mode
     window.addEventListener("DOMContentLoaded", () => {
       initSupabase();
       discoverOnlineDevices();
-      setInterval(discoverOnlineDevices, 10000);
+      // Quota-saver: Runs once on load, refreshed manually via the UI button to eliminate automatic background requests
     });
   </script>
 </body>
